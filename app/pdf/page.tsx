@@ -1,6 +1,6 @@
 'use client';
 
-import { PDFHandler } from '@/components/pdf-handler';
+import  PDFHandler  from '@/components/pdf-handler';
 
 export default function PDFProcessingPage() {
   return (

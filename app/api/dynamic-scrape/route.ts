@@ -122,7 +122,7 @@ export async function POST(request: Request) {
                 }
               }
             });
-          } catch (e) {
+          } catch {
             // Continue if selector fails
           }
         });
@@ -137,9 +137,10 @@ export async function POST(request: Request) {
     await browser.close();
     return NextResponse.json({ data: results });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Dynamic scraping failed: ' + (error instanceof Error ? error.message : 'Unknown error') },
-      { status: 500 }
-    );
+    console.error('Error during dynamic scraping:', error);
+    return new Response(JSON.stringify({ error: 'Failed to scrape content' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }

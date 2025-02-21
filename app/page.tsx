@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PDFHandler } from '@/components/pdf-handler';
+import  PDFHandler  from '@/components/pdf-handler';
 
 export default function Home() {
   const [url, setUrl] = useState('');
@@ -11,7 +11,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<string[]>([]);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'static' | 'dynamic' | 'pdf'>('static');
+  const [activeTab] = useState('static');
 
   const handleWebScrape = async (type: 'static' | 'dynamic') => {
     try {

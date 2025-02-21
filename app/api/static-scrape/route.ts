@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import * as cheerio from 'cheerio';
 import { getRandomUserAgent, humanDelay } from '../../../utils/antiBot';
-import { isRateLimited, getRemainingTokens, getTimeUntilReset } from '../../../utils/rateLimit';
+import { isRateLimited } from '../../../utils/rateLimit';
 
 interface ScrapeRequest {
   url: string;
@@ -47,11 +47,9 @@ export async function POST(request: Request) {
   
   // Check rate limit
   if (isRateLimited(clientId)) {
-    const timeUntilReset = getTimeUntilReset(clientId);
     return NextResponse.json(
       { 
         error: 'Rate limit exceeded',
-        timeUntilReset,
         remainingTokens: 0
       },
       { status: 429 }
@@ -76,10 +74,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // Add human-like delay
     await humanDelay();
     
     const response = await axios.get(url, {
       headers: {
+        'Cache-Control': 'no-cache',
         'User-Agent': getRandomUserAgent(),
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5'
@@ -96,6 +96,7 @@ export async function POST(request: Request) {
         .map((_, el) => $(el).text().trim())
         .get()
         .filter(text => text.length > 0);
+
     } else if (searchTerm) {
       // If search term is provided, use smart selectors
       const smartSelectors = getSmartSelector(searchTerm);
@@ -124,28 +125,30 @@ export async function POST(request: Request) {
     }
     
     return NextResponse.json({ data: results });
-  } catch (error: any) {
+
+  } catch (error) {
     console.error('Scraping error:', error);
 
     // Handle specific error types
     if (axios.isAxiosError(error)) {
-      if (error.code === 'ECONNABORTED') {
+      const axiosError = error as AxiosError;
+      if (axiosError.code === 'ECONNABORTED') {
         return NextResponse.json(
           { error: 'Request timed out' },
           { status: 408 }
         );
       }
-      if (error.response) {
+      if (axiosError.response) {
         // Server responded with error status
         return NextResponse.json(
           { 
-            error: `Server responded with error: ${error.response.status}`,
-            details: error.response.statusText
+            error: `Server responded with error: ${axiosError.response.status}`,
+            details: axiosError.response.statusText
           },
-          { status: error.response.status }
+          { status: axiosError.response.status }
         );
       }
-      if (error.request) {
+      if (axiosError.request) {
         // Request made but no response received
         return NextResponse.json(
           { error: 'No response from server' },
@@ -156,10 +159,7 @@ export async function POST(request: Request) {
 
     // Generic error response
     return NextResponse.json(
-      { 
-        error: 'Scraping failed',
-        details: error.message || 'Unknown error occurred'
-      },
+      { error: 'Scraping failed' },
       { status: 500 }
     );
   }

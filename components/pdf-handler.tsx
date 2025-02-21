@@ -3,22 +3,26 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
-  type PDFPage, type DetectedTable, type RedactionRequest,
-  redactPDF, extractStructuredTextFromPDF,
-  detectTablesInPDF, convertPDFToText 
+  PDFPage, 
+  RedactionRequest, 
+  DetectedTable, 
+  detectTablesInPDF, 
+  convertPDFToText, 
+  redactPDF, 
+  extractStructuredTextFromPDF 
 } from '../utils/pdfHandler';
 
-export function PDFHandler() {
-  const [file, setFile] = useState<File | null>(null);
-  const [extractedText, setExtractedText] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [pages, setPages] = useState<PDFPage[]>([]);
+export default function PDFHandler() {
+  const [pdfText, setPdfText] = useState<string>('');
   const [tables, setTables] = useState<DetectedTable[]>([]);
-  const [redactions, setRedactions] = useState<RedactionRequest[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [pages, setPages] = useState<PDFPage[]>([]);
+  const [redactions] = useState<RedactionRequest[]>([]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       console.log('Selected file:', {
         name: selectedFile.name,
@@ -26,7 +30,7 @@ export function PDFHandler() {
         size: selectedFile.size
       });
       setFile(selectedFile);
-      setError('');
+      setError(null);
     } else {
       setError('Bitte wählen Sie eine gültige PDF-Datei aus');
     }
@@ -36,7 +40,7 @@ export function PDFHandler() {
     if (!file) return;
 
     setLoading(true);
-    setError('');
+    setError(null);
 
     try {
       console.log('Processing file:', {
@@ -69,7 +73,7 @@ export function PDFHandler() {
       const data = await response.json();
       if (data.pages) {
         setPages(data.pages);
-        setExtractedText(data.pages.map((page: any) => page.content).join('\n\n'));
+        setPdfText(data.pages.map((page: PDFPage) => page.content).join('\n\n'));
       } else {
         throw new Error('No pages found in response');
       }
@@ -141,7 +145,9 @@ export function PDFHandler() {
                   width: `${cell.width}px`,
                   height: `${cell.height}px`,
                 }}
-              />
+              >
+                {cell.text}
+              </div>
             ))}
           </div>
         ))}
@@ -209,11 +215,11 @@ export function PDFHandler() {
         </div>
       ))}
 
-      {extractedText && (
+      {pdfText && (
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">Extrahierter Text:</h3>
           <div className="p-4 rounded-lg bg-secondary/50 whitespace-pre-wrap">
-            {extractedText}
+            {pdfText}
           </div>
         </div>
       )}
